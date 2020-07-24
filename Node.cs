@@ -8,6 +8,23 @@ namespace Fanuc13319
 {
     class Node
     {
+        public string nodeId { get; set; }
+        public string ip { get; set; }
+        public int plexus_Customer_No { get; set; }
+        public string pcn { get; set; }
+        public int workcenter_Key { get; set; }
+        public string workcenter_Code { get; set; }
+        public int cnc { get; set; }
+        public string name { get; set; }
+        public short variable { get; set; }
+        public decimal value { get; set; }
+        public string transDate { get; set; }
+
+
+    }
+}
+/*
+ * 
         public int updateId = 5;
         public string nodeId = "ns=2;s=cnc362.cnc362.Cycle_Counter_Shift_SL";
         public string name = "Cycle_Counter_Shift_SL";
@@ -18,10 +35,6 @@ namespace Fanuc13319
         public string cnc = "362";
         public int value = 21;
         public string transDate = "2020-06-29 00:00:00";
-
-    }
-}
-/*
  * 
  * Product product = new Product();
 product.Name = "Apple";

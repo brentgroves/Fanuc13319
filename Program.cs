@@ -22,6 +22,7 @@ using Timer = System.Timers.Timer;
 that did not work.
 https://dzone.com/articles/mqtt-publishing-and-subscribing-messages-to-mqtt-b
 https://github.com/chkr1011/MQTTnet/wiki
+
 * 
  * 
  */
@@ -32,10 +33,8 @@ namespace Fanuc13319
     {
         // short _ret = 0;  // Stores our return value
         private IManagedMqttClient managedMqttClientPublisher;
-        string fanucIP = "10.1.90.4";
         string mqttServer = "10.1.1.83";
-        ushort fanucHandle = 0;
-        int partCounter = 34;
+        Node[] nodes;
 
         MqttFactory mqttFactory;
         /// <summary>
@@ -49,14 +48,12 @@ namespace Fanuc13319
             // ushort handle = 0;
             Program myObj = new Program();
 
-            // If we specified an ip address, get it from the args
-            if (args.Length > 0)
-                myObj.fanucIP = args[0];
-            else
-                return;
 
-            // myObj.Test();
-            // return;
+            SettingsReader sr = new SettingsReader();
+            myObj.nodes = (Node[])sr.LoadConfig(typeof(Node[]));
+
+           // myObj.Test();
+           // return;
             myObj.MQTTConnect();
 
 
@@ -64,7 +61,7 @@ namespace Fanuc13319
             {
                 AutoReset = true,
                 Enabled = true,
-                Interval = 10000
+                Interval = 60000
             };
 
             timer.Elapsed += myObj.TimerElapsed;
@@ -86,21 +83,32 @@ namespace Fanuc13319
         private void Test()
         {
             DateTime localDate = DateTime.Now;
-            Console.WriteLine(localDate.ToString("yyyy-MM-dd HH:mm:ss"));
+            string transDate = localDate.ToString("yyyy-MM-dd HH:mm:ss");
+            Console.WriteLine(transDate);
+            MQTTConnect();
+            foreach (Node node in nodes)
+            {
+                try
+                {
+                    decimal value = GetVariable(node.ip, node.variable);
+                    // Only publish value if it has changed.
+                    if (value != node.value)
+                    {
+                        node.value = value;
+                        node.transDate = transDate;
+                        MQTTPublish(node);
+                    }
+                   
+                }
+                catch (Exception e)
+                {
+                    // no cleanup 
+                    continue;
+                }
 
-//            string mariaDb = DateTime.Now.ToString("yyyy-MM-dd"); // or "dd" for day
-            string mariaDb = new DateTime(2012, 12, 5, 1, 1, 1).ToString("yyyy-MM-dd HH:mm:ss"); // or "dd" for day
-            Console.WriteLine(mariaDb.ToString());
+            }
+            MQTTStop();
 
-
-
-            // 2015 is year, 12 is month, 25 is day  
-            DateTime date1 = new DateTime(2015, 12, 25);
-            Console.WriteLine(date1.ToString()); // 12/25/2015 12:00:00 AM    
-
-            // 2015 - year, 12 - month, 25 – day, 10 – hour, 30 – minute, 50 - second  
-            DateTime date2 = new DateTime(2012, 12, 25, 10, 30, 50);
-            Console.WriteLine(date1.ToString());// 12/25/2015 10:30:00 AM }  
         }
         private void FanucCleanup()
         {
@@ -133,7 +141,8 @@ namespace Fanuc13319
                 ChannelOptions = new MqttClientTcpOptions
                 {
                     Server = "10.1.1.83",
-                    Port = 1882,
+                    Port = 1883,  // Test only
+                    // Port = 1882,  // Production
                     TlsOptions = tlsOptions
                 }
             };
@@ -168,25 +177,36 @@ namespace Fanuc13319
         /// <param name="e">The event args.</param>
         private void TimerElapsed(object sender, ElapsedEventArgs e)
         {
-            GetCounter(526);
-            // test();
-            MQTTPublish();
+            DateTime localDate = DateTime.Now;
+            string transDate = localDate.ToString("yyyy-MM-dd HH:mm:ss");
+            Console.WriteLine(transDate);
+            foreach (Node node in nodes)
+            {
+                try
+                {
+                    decimal value = GetVariable(node.ip, node.variable);
+                    // Only publish value if it has changed.
+                    if (value != node.value)
+                    {
+                        node.value = value;
+                        node.transDate = transDate;
+                        MQTTPublish(node);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // no cleanup 
+                    continue;
+                }
+
+            }
 
         }
 
-        async void MQTTPublish()
+        async void MQTTPublish(Node node)
         {
             try
             {
-                string json = @"{
-                  'Name': 'Bad Boys',
-                  'ReleaseDate': '1995-4-7T00:00:00',
-                  'Genres': [
-                    'Action',
-                    'Comedy'
-                  ]
-                }";
-
                 string test = @"{
                   'updateId': 5,
                   'nodeId': 'ns=2;s=cnc362.cnc362.Cycle_Counter_Shift_SL',
@@ -200,17 +220,10 @@ namespace Fanuc13319
                   'transDate': '2020-06-29 00:00:00'
                 }";
 
-                Node node = new Node();
-                Console.WriteLine("node.updateId {0}", node.updateId);
                 Console.WriteLine("node.nodeId {0}", node.nodeId);
                 Console.WriteLine("node.name {0}", node.name);
                 // https://stackoverflow.com/questions/7574606/left-function-in-c-sharp/7574645
 
-                node.value = partCounter;
-                DateTime localDate = DateTime.Now;
-                string transDate = localDate.ToString("yyyy-MM-dd HH:mm:ss");
-                Console.WriteLine(transDate);
-                node.transDate = transDate;
 
 
                 // const transDate = moment(new Date()).format("YYYY-MM-DDTHH:mm:ss");
@@ -222,7 +235,7 @@ namespace Fanuc13319
                 var payload = Encoding.UTF8.GetBytes(json2);
 
                 //                var payload = Encoding.UTF8.GetBytes(partCounter);
-                var message = new MqttApplicationMessageBuilder().WithTopic("Kep13319").WithPayload(payload).WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce).WithRetainFlag().Build();
+                var message = new MqttApplicationMessageBuilder().WithTopic("Fanuc13319").WithPayload(payload).WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce).WithRetainFlag().Build();
 
                 if (managedMqttClientPublisher != null)
                 {
@@ -237,6 +250,8 @@ namespace Fanuc13319
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
+                throw ex; //bubble up
+
             }
 
         }
@@ -250,12 +265,15 @@ namespace Fanuc13319
            GetCounter(501);//cnc422 10.1.90.2
          * 
          */
-        short GetCounter(short number)
+        decimal GetVariable(string ip,short variable)
         {
             short ret = -1;
+            decimal value= -1;
+            ushort fanucHandle = 0;
+
             try
             {
-                ret = Focas1.cnc_allclibhndl3(fanucIP, 8193, 6, out fanucHandle);
+                ret = Focas1.cnc_allclibhndl3(ip, 8193, 6, out fanucHandle);
                 if (ret == Focas1.EW_OK)
                 {
                     Console.WriteLine("We are connected!");
@@ -268,7 +286,7 @@ namespace Fanuc13319
 
                 Focas1.ODBM macro = new Focas1.ODBM();
                 string strVal;
-                ret = Focas1.cnc_rdmacro(fanucHandle, number, 10, macro);
+                ret = Focas1.cnc_rdmacro(fanucHandle, variable, 10, macro);
                 if (ret == Focas1.EW_OK)
                 {
                     // mcr_val = 406000000
@@ -277,14 +295,12 @@ namespace Fanuc13319
                     strVal = string.Format("{0:d9}", Math.Abs(macro.mcr_val));
                     if (0 < macro.dec_val) strVal = strVal.Insert(9 - macro.dec_val, ".");
                     if (macro.mcr_val < 0) strVal = "-" + strVal;
-                    Console.WriteLine("partCounter={0}", strVal);
                     decimal decimalVal;
                     decimalVal = Convert.ToDecimal(strVal);
                     Console.WriteLine("String converted to decimal = {0} ", decimalVal);
-
-                    partCounter = Convert.ToInt32(decimalVal);
+                    value = decimalVal;
+                    //partCounter = Convert.ToInt32(decimalVal);
                     //                    partCounter2 = macro.mcr_val;
-                    Console.WriteLine("partCounter.int= {0}", partCounter);
                 }
                 else
                 {
@@ -294,15 +310,19 @@ namespace Fanuc13319
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception => {0}", e);
+                Console.WriteLine("Exception in GetVariable => {0}", e);
+                throw e;  // will bubble up after finally
+
             }
             finally
             {
-                // Free the Focas handle
-                Focas1.cnc_freelibhndl(fanucHandle);
-                Console.WriteLine("Handle has been freed");
+                if (fanucHandle != 0)
+                {
+                    Focas1.cnc_freelibhndl(fanucHandle);
+                    Console.WriteLine("Handle has been freed");
+                }
             }
-            return ret;
+            return value;
 
         }
 

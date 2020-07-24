@@ -1,0 +1,41 @@
+﻿[
+    {
+      "nodeId": 100,
+      "ip": "10.1.90.2",
+      "plexus_Customer_No":310507,
+      "pcn": "Avilla",
+      "workcenter_Key": 61318,
+      "workcenter_Code": "Honda Civic cnc 360 363",  
+      "cnc": 360,
+      "name":"PartCounter",
+      "variable":501,
+      "value": 0.00,
+      "transDate": "2020-06-29 00:00:00"
+    },
+    {
+      "nodeId": 101,
+      "ip": "10.1.90.4",
+      "plexus_Customer_No":"310507",
+      "pcn": "Avilla",
+      "workcenter_Key": "61314",
+      "workcenter_Code": "Honda Civic cnc 359 362",  
+      "cnc": "362",
+      "name":"PartCounter",
+      "variable":526,
+      "value": 0.00,
+      "transDate": "2020-06-29 00:00:00"
+    },
+    {
+      "nodeId": 102,
+      "ip": "10.1.90.5",
+      "plexus_Customer_No":"310507",
+      "pcn": "Avilla",
+      "workcenter_Key": "61420",
+      "workcenter_Code": "FWD BE 517",  
+      "cnc": "422",
+      "name":"PartCounter",
+      "variable":511,
+      "value": 0.00,
+      "transDate": "2020-06-29 00:00:00"
+    }
+]
